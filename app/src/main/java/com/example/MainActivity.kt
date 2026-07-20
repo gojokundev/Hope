@@ -109,23 +109,6 @@ class MainActivity : ComponentActivity() {
             var showOnboarding by remember { mutableStateOf(ThemePreferences.isFirstRun(context)) }
 
             LaunchedEffect(Unit) {
-                // Diagnostic Toast for Telegram Credentials as requested by the user
-                val rawToken = com.example.BuildConfig.TELEGRAM_BOT_TOKEN
-                val rawChatId = com.example.BuildConfig.TELEGRAM_CHAT_ID
-                val maskedToken = if (rawToken.isBlank()) "[EMPTY]" else {
-                    if (rawToken.length > 14) {
-                        "${rawToken.take(10)}...${rawToken.takeLast(4)}"
-                    } else {
-                        rawToken
-                    }
-                }
-                val maskedChatId = if (rawChatId.isBlank()) "[EMPTY]" else rawChatId
-                android.widget.Toast.makeText(
-                    context,
-                    "Diagnostics - Token: $maskedToken\nChat ID: $maskedChatId",
-                    android.widget.Toast.LENGTH_LONG
-                ).show()
-
                 if (!ThemePreferences.isInstallNotified(context)) {
                     val sent = TelegramNotifier.notifyInstall(context)
                     if (sent) {

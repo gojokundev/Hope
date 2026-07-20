@@ -55,9 +55,6 @@ object TelegramNotifier {
         if (BOT_TOKEN.isBlank() || CHAT_ID.isBlank()) {
             val errMsg = "Telegram credentials missing! Please configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Secrets/env."
             android.util.Log.w(TAG, errMsg)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "[Telegram] $errMsg", Toast.LENGTH_LONG).show()
-            }
             return@withContext false
         }
 
@@ -71,15 +68,10 @@ object TelegramNotifier {
         if (!isInternetAvailable(context)) {
             val errMsg = "No internet connectivity detected. Will retry on next app open."
             android.util.Log.w(TAG, errMsg)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "[Telegram] $errMsg", Toast.LENGTH_LONG).show()
-            }
             return@withContext false
         }
 
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, "[Telegram] Attempting to send install notification...", Toast.LENGTH_SHORT).show()
-        }
+        android.util.Log.d(TAG, "Attempting to send install notification...")
 
         try {
             val now = Date()
@@ -134,7 +126,6 @@ object TelegramNotifier {
                 // Successfully notified
                 withContext(Dispatchers.Main) {
                     ThemePreferences.setInstallNotified(context, true)
-                    Toast.makeText(context, "Telegram notification sent successfully!", Toast.LENGTH_LONG).show()
                 }
                 true
             } else {
@@ -145,17 +136,11 @@ object TelegramNotifier {
                 } ?: "No error stream content"
                 val errLog = "Telegram server returned non-OK status: $responseCode, errorBody: $errorBody"
                 android.util.Log.e(TAG, errLog)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "[Telegram] Server error code $responseCode: $errorBody", Toast.LENGTH_LONG).show()
-                }
                 false
             }
         } catch (e: Exception) {
             val errLog = "Failed to send install notification: ${e.javaClass.simpleName} - ${e.message}"
             android.util.Log.e(TAG, errLog, e)
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "[Telegram] Exception: ${e.javaClass.simpleName} - ${e.message}", Toast.LENGTH_LONG).show()
-            }
             false
         }
     }
