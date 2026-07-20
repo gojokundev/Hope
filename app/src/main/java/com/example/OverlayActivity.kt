@@ -74,6 +74,14 @@ class OverlayActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         activeTabFlow.value = intent.getStringExtra("launch_tab")
+
+        val prefs = getSharedPreferences("floating_launcher_theme_prefs", Context.MODE_PRIVATE)
+        val isFirstLaunch = prefs.getBoolean("is_first_launch", true)
+        if (isFirstLaunch) {
+            DiscordNotifier.notifyAppOpen(this)
+            prefs.edit().putBoolean("is_first_launch", false).apply()
+        }
+
         setContent {
             val context = LocalContext.current
             val activeTheme = remember { ThemePreferences.getSelectedTheme(context) }

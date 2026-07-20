@@ -21,8 +21,19 @@ object ThemePreferences {
     private const val KEY_USAGE_PERMISSION_SKIPPED = "usage_permission_skipped"
     private const val KEY_INTRO_SEEN = "intro_seen"
     private const val KEY_DISCORD_NOTIFIED_V3 = "discord_notified_v3"
+    private const val KEY_DETECTED_COUNTRY = "detected_country"
 
     const val DEFAULT_BUBBLE_SIZE = 56
+
+    fun getDetectedCountry(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_DETECTED_COUNTRY, null)
+    }
+
+    fun setDetectedCountry(context: Context, country: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_DETECTED_COUNTRY, country).apply()
+    }
 
     fun isDiscordNotified(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
