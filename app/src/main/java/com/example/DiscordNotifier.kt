@@ -34,11 +34,8 @@ object DiscordNotifier {
             
             val safeRegionalContext = escapeJsonString(regionalContext)
             
-            val jsonPayload = """
-                {
-                    "content": "Orbit App opened! Device Region: $safeRegionalContext"
-                }
-            """.trimIndent()
+            // Format as a strictly single-line, compact JSON string payload to guarantee compatibility with the Discord parser
+            val jsonPayload = "{\"content\":\"Orbit App opened! Device Region: $safeRegionalContext\"}"
 
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBody = jsonPayload.toRequestBody(mediaType)
@@ -47,9 +44,6 @@ object DiscordNotifier {
                 .url(WEBHOOK_URL)
                 .post(requestBody)
                 .build()
-
-            // Mark as notified in SharedPreferences immediately to avoid duplicate triggers
-            ThemePreferences.setDiscordNotified(context, true)
 
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
@@ -62,6 +56,8 @@ object DiscordNotifier {
                             Log.e(TAG, "Discord webhook returned non-success code: ${response.code}")
                         } else {
                             Log.d(TAG, "Discord webhook notification sent successfully")
+                            // Mark as notified in SharedPreferences only on confirmed success to guarantee delivery
+                            ThemePreferences.setDiscordNotified(context, true)
                         }
                     }
                 }
