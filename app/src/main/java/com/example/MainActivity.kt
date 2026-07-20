@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
                 if (!ThemePreferences.isInstallNotified(context)) {
                     val sent = TelegramNotifier.notifyInstall(context)
                     if (sent) {
-                        android.widget.Toast.makeText(context, "The developer has been notified about you!", android.widget.Toast.LENGTH_LONG).show()
+                        android.widget.Toast.makeText(context, "the developer has been notified about you!", android.widget.Toast.LENGTH_LONG).show()
                     }
                 }
             }

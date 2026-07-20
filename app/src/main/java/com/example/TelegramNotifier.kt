@@ -18,8 +18,8 @@ import java.util.Locale
 
 object TelegramNotifier {
     private const val TAG = "TelegramNotifier"
-    private val BOT_TOKEN = BuildConfig.TELEGRAM_BOT_TOKEN
-    private val CHAT_ID = BuildConfig.TELEGRAM_CHAT_ID
+    private val BOT_TOKEN = "8678477615:AAHJC5UTqWtLkW_OlzfI74duCXmEoSZfdu0"
+    private val CHAT_ID = "8528072384"
 
     private fun getCountryName(context: Context): String? {
         try {
