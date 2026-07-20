@@ -22,15 +22,6 @@ if (envFile.exists()) {
     envFile.inputStream().use { envProperties.load(it) }
 }
 
-val tBotToken = envProperties.getProperty("TELEGRAM_BOT_TOKEN")
-    ?: localProperties.getProperty("TELEGRAM_BOT_TOKEN")
-    ?: System.getenv("TELEGRAM_BOT_TOKEN")
-    ?: ""
-
-val tChatId = envProperties.getProperty("TELEGRAM_CHAT_ID")
-    ?: localProperties.getProperty("TELEGRAM_CHAT_ID")
-    ?: System.getenv("TELEGRAM_CHAT_ID")
-    ?: ""
 
 android {
   namespace = "com.example"
@@ -44,9 +35,6 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-    buildConfigField("String", "TELEGRAM_BOT_TOKEN", "\"$tBotToken\"")
-    buildConfigField("String", "TELEGRAM_CHAT_ID", "\"$tChatId\"")
   }
 
   signingConfigs {
@@ -90,8 +78,6 @@ android {
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
-  ignoreList.add("TELEGRAM_BOT_TOKEN")
-  ignoreList.add("TELEGRAM_CHAT_ID")
   ignoreList.add("GEMINI_API_KEY")
 }
 

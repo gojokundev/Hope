@@ -108,15 +108,6 @@ class MainActivity : ComponentActivity() {
             var showIntro by remember { mutableStateOf(!ThemePreferences.isIntroSeen(context)) }
             var showOnboarding by remember { mutableStateOf(ThemePreferences.isFirstRun(context)) }
 
-            LaunchedEffect(Unit) {
-                if (!ThemePreferences.isInstallNotified(context)) {
-                    val sent = TelegramNotifier.notifyInstall(context)
-                    if (sent) {
-                        android.widget.Toast.makeText(context, "the developer has been notified about you!", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-            
             MyApplicationTheme(accentColor = activeTheme.getColor()) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -941,46 +932,6 @@ fun OnboardingScreen(
                     fontSize = 12.sp,
                     lineHeight = 18.sp
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Developer notification banner
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
-            colors = CardDefaults.cardColors(containerColor = accentColor.copy(alpha = 0.08f)),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Notification Info",
-                    tint = accentColor,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = stringResource(id = R.string.onboarding_developer_notified),
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 18.sp
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(id = R.string.onboarding_developer_notified_desc),
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 11.sp,
-                        lineHeight = 16.sp
-                    )
-                }
             }
         }
 

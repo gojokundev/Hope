@@ -18,54 +18,6 @@ app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 // API ENDPOINTS
 // ----------------------------------------------------
 
-/**
- * Endpoint to securely proxy installer notifications to Telegram
- */
-app.post("/api/notify-install", async (req, res) => {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  const { country, date, time } = req.body;
-
-  if (!botToken || !chatId) {
-    console.warn("Telegram notification skipped: credentials missing in .env");
-    return res.status(200).json({
-      success: false,
-      message: "Telegram credentials missing in environment. Please configure them in Settings > Secrets."
-    });
-  }
-
-  try {
-    const text = `🔔 *New install${country ? ` from ${country}` : ""}*\n📅 ${date || ""}\n🕒 ${time || ""}`;
-    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: "Markdown"
-      })
-    });
-
-    const data = await response.json();
-    if (response.ok && data.ok) {
-      return res.json({ success: true, message: "Notification sent successfully!" });
-    } else {
-      console.error("Telegram API error:", data);
-      return res.status(400).json({
-        success: false,
-        message: `Telegram API returned error: ${data.description || "Unknown error"}`
-      });
-    }
-  } catch (error: any) {
-    console.error("Failed to proxy Telegram notification:", error);
-    return res.status(500).json({
-      success: false,
-      message: `Failed to connect to Telegram: ${error.message || "Unknown error"}`
-    });
-  }
-});
 
 /**
  * Premium OCR endpoint proxying cropped screenshots to Gemini 3.5 Flash
