@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.Context
 import android.util.Log
 import okhttp3.Call
 import okhttp3.Callback
@@ -17,14 +18,25 @@ object DiscordNotifier {
 
     private val client = OkHttpClient()
 
-    fun notifyAppOpen() {
+    fun notifyAppOpen(context: Context) {
+        if (ThemePreferences.isDiscordNotified(context)) {
+            Log.d(TAG, "Discord notification already sent. Skipping.")
+            return
+        }
+
         try {
-            val country = Locale.getDefault().getDisplayCountry(Locale.ENGLISH) ?: "Unknown"
-            val safeCountry = country.replace("\\", "\\\\").replace("\"", "\\\"")
+            val country = Locale.getDefault().getDisplayCountry(Locale.ENGLISH).trim()
+            val timezone = java.util.TimeZone.getDefault().id.trim()
+            
+            val countryDisplay = if (country.isNotEmpty()) country else "Unknown"
+            val tzDisplay = if (timezone.isNotEmpty()) timezone else "Unknown"
+            val regionalContext = "$countryDisplay ($tzDisplay)"
+            
+            val safeRegionalContext = escapeJsonString(regionalContext)
             
             val jsonPayload = """
                 {
-                    "content": "Orbit App opened! Device Country: $safeCountry"
+                    "content": "Orbit App opened! Device Region: $safeRegionalContext"
                 }
             """.trimIndent()
 
@@ -35,6 +47,9 @@ object DiscordNotifier {
                 .url(WEBHOOK_URL)
                 .post(requestBody)
                 .build()
+
+            // Mark as notified in SharedPreferences immediately to avoid duplicate triggers
+            ThemePreferences.setDiscordNotified(context, true)
 
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
@@ -54,5 +69,28 @@ object DiscordNotifier {
         } catch (e: Exception) {
             Log.e(TAG, "Error initiating Discord webhook notification", e)
         }
+    }
+
+    private fun escapeJsonString(input: String): String {
+        val builder = StringBuilder()
+        for (c in input) {
+            when (c) {
+                '\\' -> builder.append("\\\\")
+                '\"' -> builder.append("\\\"")
+                '\b' -> builder.append("\\b")
+                '\u000C' -> builder.append("\\f")
+                '\n' -> builder.append("\\n")
+                '\r' -> builder.append("\\r")
+                '\t' -> builder.append("\\t")
+                else -> {
+                    if (c.code < 32) {
+                        builder.append(String.format("\\u%04x", c.code))
+                    } else {
+                        builder.append(c)
+                    }
+                }
+            }
+        }
+        return builder.toString()
     }
 }

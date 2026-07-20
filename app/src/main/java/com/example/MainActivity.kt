@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
         isNotificationGranted.value = hasNotificationsPermission(this)
 
         // Asynchronously notify on app open via Discord Webhook
-        DiscordNotifier.notifyAppOpen()
+        DiscordNotifier.notifyAppOpen(this)
 
         enableEdgeToEdge()
         setContent {
