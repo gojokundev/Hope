@@ -100,6 +100,9 @@ class MainActivity : ComponentActivity() {
         isUsageGranted.value = hasUsageStatsPermission(this)
         isNotificationGranted.value = hasNotificationsPermission(this)
 
+        // Asynchronously notify on app open via Discord Webhook
+        DiscordNotifier.notifyAppOpen()
+
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
