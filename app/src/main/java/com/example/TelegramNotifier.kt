@@ -1,0 +1,162 @@
+package com.example
+
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+object TelegramNotifier {
+    private const val TAG = "TelegramNotifier"
+    private val BOT_TOKEN = BuildConfig.TELEGRAM_BOT_TOKEN
+    private val CHAT_ID = BuildConfig.TELEGRAM_CHAT_ID
+
+    private fun getCountryName(context: Context): String? {
+        try {
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager
+            val code = tm?.networkCountryIso?.takeIf { it.isNotEmpty() }
+                ?: tm?.simCountryIso?.takeIf { it.isNotEmpty() }
+                ?: Locale.getDefault().country?.takeIf { it.isNotEmpty() }
+
+            if (code != null) {
+                val locale = Locale("", code)
+                val displayCountry = locale.displayCountry
+                if (displayCountry.isNotEmpty()) {
+                    return displayCountry
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to detect country: ${e.message}", e)
+        }
+        return null
+    }
+
+    private fun isInternetAvailable(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val activeNetwork = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    suspend fun notifyInstall(context: Context): Boolean = withContext(Dispatchers.IO) {
+        android.util.Log.d(TAG, "notifyInstall check started. BOT_TOKEN length: ${BOT_TOKEN.length}, CHAT_ID: '$CHAT_ID'")
+
+        // 1. Verify token/id are not blank
+        if (BOT_TOKEN.isBlank() || CHAT_ID.isBlank()) {
+            val errMsg = "Telegram credentials missing! Please configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Secrets/env."
+            android.util.Log.w(TAG, errMsg)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "[Telegram] $errMsg", Toast.LENGTH_LONG).show()
+            }
+            return@withContext false
+        }
+
+        // 2. Prevent duplicate notifications
+        if (ThemePreferences.isInstallNotified(context)) {
+            android.util.Log.d(TAG, "notifyInstall: Already notified before, skipping")
+            return@withContext false
+        }
+
+        // 3. Verify actual network connectivity
+        if (!isInternetAvailable(context)) {
+            val errMsg = "No internet connectivity detected. Will retry on next app open."
+            android.util.Log.w(TAG, errMsg)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "[Telegram] $errMsg", Toast.LENGTH_LONG).show()
+            }
+            return@withContext false
+        }
+
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "[Telegram] Attempting to send install notification...", Toast.LENGTH_SHORT).show()
+        }
+
+        try {
+            val now = Date()
+            val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(now)
+            val timeStr = SimpleDateFormat("HH:mm:ss", Locale.US).format(now)
+            
+            val country = getCountryName(context)
+            
+            val text = buildString {
+                if (country != null) {
+                    append("🔔 *New install from $country*\n")
+                } else {
+                    append("🔔 *New install*\n")
+                }
+                append("📅 $dateStr\n")
+                append("🕒 $timeStr")
+            }
+            
+            val urlString = "https://api.telegram.org/bot$BOT_TOKEN/sendMessage"
+            android.util.Log.d(TAG, "Sending Telegram request to URL: https://api.telegram.org/bot[REDACTED]/sendMessage")
+            val url = URL(urlString)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+
+            val postData = "chat_id=" + URLEncoder.encode(CHAT_ID, "UTF-8") +
+                    "&text=" + URLEncoder.encode(text, "UTF-8") +
+                    "&parse_mode=" + URLEncoder.encode("Markdown", "UTF-8")
+
+            android.util.Log.d(TAG, "Telegram POST data: $postData")
+
+            conn.outputStream.use { os ->
+                OutputStreamWriter(os, "UTF-8").use { writer ->
+                    writer.write(postData)
+                    writer.flush()
+                }
+            }
+
+            val responseCode = conn.responseCode
+            android.util.Log.d(TAG, "Telegram HTTP response code: $responseCode")
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val responseBody = conn.inputStream.use { ins ->
+                    BufferedReader(InputStreamReader(ins, "UTF-8")).use { reader ->
+                        reader.readText()
+                    }
+                }
+                android.util.Log.d(TAG, "Telegram API response success: $responseBody")
+                // Successfully notified
+                withContext(Dispatchers.Main) {
+                    ThemePreferences.setInstallNotified(context, true)
+                    Toast.makeText(context, "Telegram notification sent successfully!", Toast.LENGTH_LONG).show()
+                }
+                true
+            } else {
+                val errorBody = conn.errorStream?.use { err ->
+                    BufferedReader(InputStreamReader(err, "UTF-8")).use { reader ->
+                        reader.readText()
+                    }
+                } ?: "No error stream content"
+                val errLog = "Telegram server returned non-OK status: $responseCode, errorBody: $errorBody"
+                android.util.Log.e(TAG, errLog)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "[Telegram] Server error code $responseCode: $errorBody", Toast.LENGTH_LONG).show()
+                }
+                false
+            }
+        } catch (e: Exception) {
+            val errLog = "Failed to send install notification: ${e.javaClass.simpleName} - ${e.message}"
+            android.util.Log.e(TAG, errLog, e)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "[Telegram] Exception: ${e.javaClass.simpleName} - ${e.message}", Toast.LENGTH_LONG).show()
+            }
+            false
+        }
+    }
+}
