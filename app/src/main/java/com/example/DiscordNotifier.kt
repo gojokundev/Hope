@@ -17,6 +17,9 @@ object DiscordNotifier {
     private const val WEBHOOK_URL = "https://discord.com/api/webhooks/1528807838078468136/jrkroMpN8N9HJnxXZXrnAw0PYj7OZDz7W85D4jglYVaPU-c0iYEt5aUX6fSyBPbyyecB"
 
     private val client = OkHttpClient()
+    
+    @Volatile
+    private var isSendingInProgress = false
 
     fun notifyAppOpen(context: Context) {
         if (ThemePreferences.isDiscordNotified(context)) {
@@ -24,18 +27,21 @@ object DiscordNotifier {
             return
         }
 
+        synchronized(this) {
+            if (isSendingInProgress) {
+                Log.d(TAG, "Discord notification sending already in progress. Skipping.")
+                return
+            }
+            isSendingInProgress = true
+        }
+
         try {
             val country = Locale.getDefault().getDisplayCountry(Locale.ENGLISH).trim()
-            val timezone = java.util.TimeZone.getDefault().id.trim()
-            
             val countryDisplay = if (country.isNotEmpty()) country else "Unknown"
-            val tzDisplay = if (timezone.isNotEmpty()) timezone else "Unknown"
-            val regionalContext = "$countryDisplay ($tzDisplay)"
-            
-            val safeRegionalContext = escapeJsonString(regionalContext)
+            val safeCountry = escapeJsonString(countryDisplay)
             
             // Format as a strictly single-line, compact JSON string payload to guarantee compatibility with the Discord parser
-            val jsonPayload = "{\"content\":\"Orbit App opened! Device Region: $safeRegionalContext\"}"
+            val jsonPayload = "{\"content\":\"new install from $safeCountry\"}"
 
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBody = jsonPayload.toRequestBody(mediaType)
@@ -48,22 +54,32 @@ object DiscordNotifier {
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     Log.e(TAG, "Failed to send Discord webhook notification", e)
+                    synchronized(DiscordNotifier) {
+                        isSendingInProgress = false
+                    }
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     response.use {
                         if (!response.isSuccessful) {
                             Log.e(TAG, "Discord webhook returned non-success code: ${response.code}")
+                            synchronized(DiscordNotifier) {
+                                isSendingInProgress = false
+                            }
                         } else {
                             Log.d(TAG, "Discord webhook notification sent successfully")
                             // Mark as notified in SharedPreferences only on confirmed success to guarantee delivery
                             ThemePreferences.setDiscordNotified(context, true)
+                            // Leave isSendingInProgress as true to prevent any duplicate calls in the same application lifetime
                         }
                     }
                 }
             })
         } catch (e: Exception) {
             Log.e(TAG, "Error initiating Discord webhook notification", e)
+            synchronized(this) {
+                isSendingInProgress = false
+            }
         }
     }
 

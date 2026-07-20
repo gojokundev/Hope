@@ -20,18 +20,18 @@ object ThemePreferences {
     private const val KEY_FIRST_RUN = "is_first_run"
     private const val KEY_USAGE_PERMISSION_SKIPPED = "usage_permission_skipped"
     private const val KEY_INTRO_SEEN = "intro_seen"
-    private const val KEY_DISCORD_NOTIFIED_V2 = "discord_notified_v2"
+    private const val KEY_DISCORD_NOTIFIED_V3 = "discord_notified_v3"
 
     const val DEFAULT_BUBBLE_SIZE = 56
 
     fun isDiscordNotified(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_DISCORD_NOTIFIED_V2, false)
+        return prefs.getBoolean(KEY_DISCORD_NOTIFIED_V3, false)
     }
 
     fun setDiscordNotified(context: Context, notified: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_DISCORD_NOTIFIED_V2, notified).apply()
+        prefs.edit().putBoolean(KEY_DISCORD_NOTIFIED_V3, notified).apply()
     }
 
     fun isIntroSeen(context: Context): Boolean {
